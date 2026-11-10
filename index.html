@@ -6,7 +6,7 @@
 <title>ELODIE — 439 East 77th Street</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/"}}</script>
 <style>
 :root{
   --ink:#0d0b09; --ivory:#f3efe7; --ivory-dim:#c9c2b4; --gold:#b99b5f; --gold-hi:#e5cf9a;
@@ -141,7 +141,9 @@ html,body{height:100%;background:var(--ink);color:var(--ivory);font-family:var(-
 
 <div id="zoomFade"></div>
 
-<script>
+<script type="module">
+import * as THREE from "three";
+import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 /* ================= DATA (verified from elodienyc.com published plan sheets, 2026-11-10) ================= */
 var LOCAL=true;
 var CDN="https://images.squarespace-cdn.com/content/v1/699dddb97eee257c67fbfa09/";
@@ -370,6 +372,10 @@ var TOUR_STOPS={
 /* ================= ROUTER ================= */
 var S={unit:null,floor:null};
 function go(name){location.hash=name}
+window.go=go;
+window.__walkPath=function(i){walkPath(i)};
+window.__doll=function(){return {mode:doll.mode,anim:!!(doll.walk&&doll.walk.anim),cur:doll.walk?doll.walk.cur:-1,ready:ASSETS.ready};};
+window.__wk=function(){var wk=doll.walk;return {n:wk.pts.length,adj:wk.adj.map(function(a){return a.join("-")}).join("|"),cur:wk.cur,pts:wk.pts.map(function(p){return [Math.round(p.x),Math.round(p.z)]})};};
 function route(){
   var h=location.hash||"#/tower";
   var m;
@@ -564,6 +570,21 @@ function buildPlan(u){
   document.getElementById("specTable").innerHTML=rows.map(function(r){return '<div class="sr"><b>'+r[0]+'</b><span>'+r[1]+'</span></div>'}).join("");
 }
 
+/* ---------- CC0 asset pipeline (Poly Haven, polyhaven.com/license) ---------- */
+var ASSETS={ready:false,loading:false,models:{},tex:{},q:[]};
+function loadAssets(done){
+  if(ASSETS.ready){done();return}
+  ASSETS.q.push(done);
+  if(ASSETS.loading)return;
+  ASSETS.loading=true;
+  var gl=new GLTFLoader(), tl=new THREE.TextureLoader(), pend=0;
+  function fin(){ if(--pend===0){ ASSETS.ready=true; var q=ASSETS.q; ASSETS.q=[]; q.forEach(function(f){f()}); } }
+  var M={sofa:"Sofa_01",table:"CoffeeTable_01",dining:"dining_table",dchair:"dining_chair_02",lamp:"modern_ceiling_lamp_01",side:"side_table_01",lounge:"mid_century_lounge_chair"};
+  Object.keys(M).forEach(function(k){ pend++; gl.load("glb_"+M[k]+".glb",function(gt){ASSETS.models[k]=gt.scene;fin()},undefined,function(){fin()}); });
+  var T={wood:"wood_floor_diff",woodn:"wood_floor_nor_gl",marble:"marble_01_diff",marblen:"marble_01_nor_gl",deck:"wood_floor_deck_diff",plaster:"plastered_wall_02_diff",oak:"oak_veneer_01_diff"};
+  Object.keys(T).forEach(function(k){ pend++; tl.load("tx_"+T[k]+".webp",function(t){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;if(k.slice(-1)!=="n")t.colorSpace=THREE.SRGBColorSpace;ASSETS.tex[k]=t;fin()},undefined,function(){fin()}); });
+}
+
 /* ---------- dollhouse + first-person walk (traced geometry) ---------- */
 function startDoll(u,mode){
   doll.unit=u; doll.mode=mode||"orbit";
@@ -573,6 +594,7 @@ function startDoll(u,mode){
     "Conceptual walkthrough — traced from the published plan sheet · finishes illustrative · drag to look, tap a gold marker to move":
     "Conceptual 3D model traced from the published plan sheet — finishes & furniture illustrative";
   var L=INTERIORS[u];
+  if(!ASSETS.ready) loadAssets(function(){ if(doll.unit===u&&INTERIORS[u]) startDoll(u,doll.mode); });
   var cv=document.getElementById("dollCanvas");
   if(!doll.inited){
     doll.inited=true;
@@ -639,7 +661,12 @@ function startDoll(u,mode){
       doll.cam.position.set(wk.pos.x,EYE,wk.pos.z);
       doll.cam.rotation.order="YXZ";
       doll.cam.rotation.y=wk.yaw; doll.cam.rotation.x=wk.pitch; doll.cam.rotation.z=0;
-      doll.hot.forEach(function(h,i){ h.visible=(i!==wk.cur); });
+      doll.hot.forEach(function(h,i){
+        var wi=i>>1, p=wk.pts[wi];
+        var dx=p.x-wk.pos.x, dz=p.z-wk.pos.z, dd=Math.sqrt(dx*dx+dz*dz);
+        h.visible=(wi!==wk.cur)&&dd>5;
+        h.material.opacity=dd<10?0.55:0.95;
+      });
     } else {
       if(doll.spin) doll.tAz+=0.0022;
       doll.az+=(doll.tAz-doll.az)*0.08;
@@ -710,6 +737,13 @@ function buildUnit(g,L,walk){
   var CLAY=walk?0xe7dfd0:0xf2efe9;
   var ch=L.ch, wallH=walk?ch:Math.min(5.2,ch*0.55), t=0.34;
   function mat(c){return new THREE.MeshStandardMaterial({color:c,roughness:0.92,metalness:0.02})}
+  function wallMat(len){
+    if(ASSETS.ready&&ASSETS.tex.plaster){
+      var t=ASSETS.tex.plaster.clone(); t.needsUpdate=true; t.repeat.set(Math.max(1,len/12),Math.max(1,wallH/12));
+      return new THREE.MeshStandardMaterial({map:t,color:0xffffff,roughness:0.94,metalness:0});
+    }
+    return mat(CLAY);
+  }
   function box(w,h,d,x,y,z,m){var b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);b.position.set(x,y,z);b.castShadow=true;b.receiveShadow=true;g.add(b);return b}
   var maxX=L.W, maxZ=L.D;
   L.rooms.forEach(function(r){ var ze=r.z+r.dp; if(ze>maxZ)maxZ=ze; });
@@ -719,9 +753,18 @@ function buildUnit(g,L,walk){
   L.rooms.forEach(function(r){
     var f=r.f||OAK, m;
     if(walk){
-      var tx=makeTex(f==="stone"?"stone":(f==="deck"?"deck":"oak"));
-      tx.repeat.set(Math.max(1,r.w/8),Math.max(1,r.dp/8));
-      m=new THREE.MeshStandardMaterial({map:tx,roughness:f==="stone"?0.55:0.62,metalness:0.03});
+      if(ASSETS.ready){
+        var key=f==="stone"?"marble":(f==="deck"?"deck":"wood");
+        var tx=ASSETS.tex[key].clone(); tx.needsUpdate=true;
+        tx.repeat.set(Math.max(1,r.w/8),Math.max(1,r.dp/8));
+        var tn=null, nsrc=ASSETS.tex[key+"n"];
+        if(nsrc){ tn=nsrc.clone(); tn.needsUpdate=true; tn.repeat.copy(tx.repeat); }
+        m=new THREE.MeshStandardMaterial({map:tx,normalMap:tn,roughness:f==="stone"?0.5:0.62,metalness:0.02});
+      } else {
+        var txp=makeTex(f==="stone"?"stone":(f==="deck"?"deck":"oak"));
+        txp.repeat.set(Math.max(1,r.w/8),Math.max(1,r.dp/8));
+        m=new THREE.MeshStandardMaterial({map:txp,roughness:f==="stone"?0.55:0.62,metalness:0.03});
+      }
     } else {
       var c=f==="stone"?0xcfc9c0:(f==="deck"?0xb08a63:0xd9c3a3);
       m=mat(c);
@@ -739,14 +782,14 @@ function buildUnit(g,L,walk){
     segs.forEach(function(sg){
       var sl=sg[1]-sg[0]; if(sl<0.05)return;
       var mid=(sg[0]+sg[1])/2;
-      if(horiz) box(sl,wallH,t, x1+mid, wallH/2, z1, mat(CLAY));
-      else box(t,wallH,sl, x1, wallH/2, z1+mid, mat(CLAY));
+      if(horiz) box(sl,wallH,t, x1+mid, wallH/2, z1, wallMat(sl));
+      else box(t,wallH,sl, x1, wallH/2, z1+mid, wallMat(sl));
     });
     if(walk){ /* lintels above door gaps */
       gaps.forEach(function(gp){
         var gw=gp[1]-gp[0], mid=(gp[0]+gp[1])/2, lh=ch-7.2; if(lh<=0)return;
-        if(horiz) box(gw,lh,t, x1+mid, 7.2+lh/2, z1, mat(CLAY));
-        else box(t,lh,gw, x1, 7.2+lh/2, z1+mid, mat(CLAY));
+        if(horiz) box(gw,lh,t, x1+mid, 7.2+lh/2, z1, wallMat(gw));
+        else box(t,lh,gw, x1, 7.2+lh/2, z1+mid, wallMat(gw));
       });
     }
     (w[4]||[]).forEach(function(dr){ /* door arc + leaf */
@@ -763,17 +806,78 @@ function buildUnit(g,L,walk){
   /* perimeter shell */
   [[0,0,maxX,0],[maxX,0,maxX,maxZ],[maxX,maxZ,0,maxZ],[0,maxZ,0,0]].forEach(function(w){
     var x1=w[0],z1=w[1],x2=w[2],z2=w[3],horiz=(z1===z2);
-    if(horiz) box(x2-x1,wallH,t,(x1+x2)/2,wallH/2,z1,mat(CLAY)); else box(t,wallH,z2-z1,x1,wallH/2,(z1+z2)/2,mat(CLAY));
+    if(horiz) box(x2-x1,wallH,t,(x1+x2)/2,wallH/2,z1,wallMat(x2-x1)); else box(t,wallH,z2-z1,x1,wallH/2,(z1+z2)/2,wallMat(z2-z1));
   });
   /* furniture */
   var FH={bed:1.7,sofa:2.6,table:2.4,dining:2.4,counter:3,island:3,vanity:2.8,tub:1.9};
   var FMAT={bed:0xded6c8,sofa:0xcfc4b0,table:0x8a6a48,dining:0x8a6a48,counter:0xe9e6e0,island:0x9a7a52,vanity:0xe9e6e0,tub:0xf0ece4};
+  var FMODEL={sofa:"sofa",table:"table",dining:"dining"};
+  function placeModel(name,cx,cz,rot,fitW,fitD){
+    var src=ASSETS.models[name]; if(!src)return;
+    var inst=src.clone(true);
+    var bb=new THREE.Box3().setFromObject(inst);
+    var sw=bb.max.x-bb.min.x, sd=bb.max.z-bb.min.z;
+    var sc=Math.min(fitW/sw,fitD/sd);
+    inst.scale.setScalar(sc);
+    inst.position.set(-(bb.min.x+bb.max.x)/2*sc,-bb.min.y*sc+0.08,-(bb.min.z+bb.max.z)/2*sc);
+    var wrap=new THREE.Group(); wrap.add(inst);
+    wrap.rotation.y=rot||0;
+    wrap.position.set(cx,0,cz);
+    wrap.traverse(function(o){if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+    g.add(wrap);
+  }
   (L.furn||[]).forEach(function(f){
+    if(ASSETS.ready&&FMODEL[f.k]&&ASSETS.models[FMODEL[f.k]]){
+      placeModel(FMODEL[f.k],f.x+f.w/2,f.z+f.dp/2,f.rot?Math.PI/2:0,f.w,f.dp);
+      if(f.k==="dining"&&ASSETS.models.dchair){
+        var cx=f.x+f.w/2, cz=f.z+f.dp/2;
+        [[-(f.w/2+1.15),0,Math.PI/2],[f.w/2+1.15,0,-Math.PI/2],[0,-(f.dp/2+1.15),0],[0,f.dp/2+1.15,Math.PI]].forEach(function(c){
+          placeModel("dchair",cx+c[0],cz+c[1],c[2],1.7,1.7);
+        });
+      }
+      return;
+    }
+    if(walk&&ASSETS.ready&&ASSETS.tex.oak&&(f.k==="island"||f.k==="counter"||f.k==="vanity"||f.k==="tub"||f.k==="bed")){
+      var rot=f.rot?Math.PI/2:0, hh=FH[f.k]||2;
+      function texm(src,rx,rz,rough){
+        var t=src.clone(); t.needsUpdate=true; t.repeat.set(Math.max(1,rx/6),Math.max(1,rz/6));
+        return new THREE.MeshStandardMaterial({map:t,roughness:rough,metalness:0.02});
+      }
+      if(f.k==="island"||f.k==="counter"){
+        var base=box(f.w,hh-0.18,f.dp,f.x+f.w/2,(hh-0.18)/2+0.1,f.z+f.dp/2,texm(ASSETS.tex.oak,f.w,f.dp,0.6));
+        base.rotation.y=rot;
+        var top=box(f.w+0.15,0.18,f.dp+0.15,f.x+f.w/2,hh-0.09+0.1,f.z+f.dp/2,texm(ASSETS.tex.marble,f.w,f.dp,0.32));
+        top.rotation.y=rot;
+      } else if(f.k==="vanity"||f.k==="tub"){
+        var vb=box(f.w,hh,f.dp,f.x+f.w/2,hh/2+0.1,f.z+f.dp/2,texm(ASSETS.tex.marble,f.w,f.dp,0.38));
+        vb.rotation.y=rot;
+      } else { /* bed: wood base + light bedding + headboard */
+        var bb2=box(f.w,0.9,f.dp,f.x+f.w/2,0.55,f.z+f.dp/2,texm(ASSETS.tex.oak,f.w,f.dp,0.7));
+        bb2.rotation.y=rot;
+        var mt=box(f.w-0.3,0.55,f.dp-0.3,f.x+f.w/2,1.25,f.z+f.dp/2,mat(0xe9e4da));
+        mt.rotation.y=rot;
+        var hb=box(f.w,2.6,0.35,f.x+f.w/2,1.4,f.z+0.2,mat(0xd8cdbb));
+        hb.rotation.y=rot;
+      }
+      return;
+    }
     var b=box(f.w,FH[f.k]||2,f.dp,f.x+f.w/2,(FH[f.k]||2)/2+0.1,f.z+f.dp/2,mat(FMAT[f.k]||0xe8e2d6));
     b.rotation.y=(f.rot?Math.PI/2:0);
     if(f.k==="sofa"){ var back=box(f.w,1.1,0.7,f.x+f.w/2,2.6+0.55,f.z+0.35,mat(FMAT.sofa)); back.rotation.y=b.rotation.y; }
-    if(f.k==="bed"){ box(f.w,1.3,0.5,f.x+f.w/2,1.05,f.z+(f.rot?0.25:0.25),mat(0xcabfa8)).rotation.y=b.rotation.y; }
+    if(f.k==="bed"){ box(f.w,1.3,0.5,f.x+f.w/2,1.05,f.z+0.25,mat(0xcabfa8)).rotation.y=b.rotation.y; }
   });
+  if(walk&&ASSETS.ready&&ASSETS.models.lamp){
+    L.rooms.forEach(function(r){
+      if(r.w*r.dp<70)return;
+      var lp=ASSETS.models.lamp.clone(true);
+      var bb3=new THREE.Box3().setFromObject(lp);
+      var sc3=1.6/Math.max(bb3.max.x-bb3.min.x,bb3.max.z-bb3.min.z);
+      lp.scale.setScalar(sc3);
+      lp.position.set(r.x+r.w/2-(bb3.min.x+bb3.max.x)/2*sc3, ch-0.12-bb3.max.y*sc3, r.z+r.dp/2-(bb3.min.z+bb3.max.z)/2*sc3);
+      lp.traverse(function(o){if(o.isMesh)o.castShadow=true});
+      g.add(lp);
+    });
+  }
   /* glass + sky backdrop */
   var sky=skyTex();
   (L.glass||[]).forEach(function(gl){
@@ -836,6 +940,31 @@ function setupWalk(L){
     for(var k=0;k<solids.length;k++){ if(cross(pts[i],pts[j],solids[k])){blocked=true;break} }
     if(!blocked){ adj[i].push(j); adj[j].push(i); }
   }
+  /* heal graph: join components across the single most plausible missed doorway */
+  function comps(){
+    var seen=new Array(n).fill(-1), nc=0;
+    for(var i=0;i<n;i++){ if(seen[i]>=0)continue; var q=[i]; seen[i]=nc;
+      while(q.length){ var c=q.pop(); adj[c].forEach(function(m){ if(seen[m]<0){seen[m]=nc;q.push(m)} }); }
+      nc++; }
+    return seen;
+  }
+  var comp=comps(), guard=0;
+  while(guard++<8){
+    var allSame=true; for(var ci=1;ci<n;ci++) if(comp[ci]!==comp[0]){allSame=false;break}
+    if(allSame) break;
+    var bp=null, bd=1e9;
+    for(i=0;i<n;i++) for(var j=i+1;j<n;j++){
+      if(comp[i]===comp[j]) continue;
+      var d=(pts[i].x-pts[j].x)*(pts[i].x-pts[j].x)+(pts[i].z-pts[j].z)*(pts[i].z-pts[j].z);
+      if(d>=bd) continue;
+      var cr=0;
+      for(var k2=0;k2<solids.length;k2++){ if(cross(pts[i],pts[j],solids[k2])) cr++; }
+      if(cr===1){ bd=d; bp=[i,j]; }
+    }
+    if(!bp) break;
+    adj[bp[0]].push(bp[1]); adj[bp[1]].push(bp[0]);
+    comp=comps();
+  }
   /* start: largest room, facing the farthest waypoint (longest sightline) */
   var start=0, best=-1, cnt=0;
   L.rooms.forEach(function(r){ var a=r.w*r.dp; if(a>=14){ if(a>best){best=a;start=cnt} cnt++; } });
@@ -845,9 +974,9 @@ function setupWalk(L){
   doll.walk={pts:pts,adj:adj,cur:start,pos:new THREE.Vector3(pts[start].x,0,pts[start].z),yaw:yaw,pitch:-0.04,anim:null};
   /* hotspot markers */
   pts.forEach(function(p,i){
-    var ring=new THREE.Mesh(new THREE.RingGeometry(0.8,1.2,28),new THREE.MeshBasicMaterial({color:0xe5cf9a,transparent:true,opacity:0.95,side:THREE.DoubleSide}));
+    var ring=new THREE.Mesh(new THREE.RingGeometry(0.8,1.2,28),new THREE.MeshBasicMaterial({color:0xc9a24f,transparent:true,opacity:0.95,side:THREE.DoubleSide}));
     ring.rotation.x=-Math.PI/2; ring.position.set(p.x,0.14,p.z); ring.userData.wp=i;
-    var dot=new THREE.Mesh(new THREE.CircleGeometry(0.3,20),new THREE.MeshBasicMaterial({color:0xe5cf9a,transparent:true,opacity:0.95,side:THREE.DoubleSide}));
+    var dot=new THREE.Mesh(new THREE.CircleGeometry(0.3,20),new THREE.MeshBasicMaterial({color:0xc9a24f,transparent:true,opacity:0.95,side:THREE.DoubleSide}));
     dot.rotation.x=-Math.PI/2; dot.position.set(p.x,0.14,p.z); dot.userData.wp=i;
     doll.group.add(ring); doll.group.add(dot);
     doll.hot.push(ring); doll.hot.push(dot);
