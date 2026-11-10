@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ELODIE — 439 East 77th Street</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<style>
+:root{
+  --ink:#0d0b09; --ivory:#f3efe7; --ivory-dim:#c9c2b4; --gold:#b99b5f; --gold-hi:#e5cf9a;
+  --aub:#2b1a22; --serif:'Playfair Display',Didot,serif; --sans:'Inter',Helvetica,Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--ink);color:var(--ivory);font-family:var(--sans);overflow:hidden}
+.screen{position:fixed;inset:0;display:none;flex-direction:column}
+.screen.on{display:flex}
+.brand{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
+  padding:18px 22px;z-index:30;pointer-events:none;mix-blend-mode:difference}
+.brand .logo{font-family:var(--serif);letter-spacing:.42em;font-size:15px;color:#fff}
+.brand .addr{font-size:10px;letter-spacing:.3em;color:#fff;font-weight:300}
+/* ---------- TOWER ---------- */
+#towerStage{position:absolute;inset:0;overflow:hidden;background:#111}
+#towerBg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(28px) brightness(.42);transform:scale(1.15)}
+#towerImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;
+  transition:transform 1.2s cubic-bezier(.6,.02,.2,1),opacity .8s ease;will-change:transform}
+#towerVeil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,6,.34),rgba(10,8,6,0) 26%,rgba(10,8,6,0) 62%,rgba(10,8,6,.52));pointer-events:none;z-index:2}
+#bandZone{position:absolute;z-index:5;touch-action:none;cursor:pointer}
+#band{position:absolute;left:0;right:0;opacity:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(229,207,154,.12) 0%,rgba(229,207,154,.5) 50%,rgba(229,207,154,.12) 100%);
+  border-top:2px solid rgba(229,207,154,.95);border-bottom:2px solid rgba(229,207,154,.95);box-shadow:0 0 24px rgba(229,207,154,.35) inset;
+  transition:opacity .25s ease;z-index:6}
+#bandRail{position:absolute;width:1px;background:rgba(229,207,154,.55);z-index:6;pointer-events:none}
+#floorTag{position:absolute;z-index:7;pointer-events:none;opacity:0;transition:opacity .25s ease;
+  font-size:10px;letter-spacing:.32em;color:var(--gold-hi);padding:6px 10px;border:1px solid rgba(229,207,154,.5);
+  background:rgba(13,11,9,.72);backdrop-filter:blur(3px)}
+#towerHint{position:absolute;left:0;right:0;bottom:9vh;text-align:center;z-index:8;pointer-events:none;
+  font-size:10px;letter-spacing:.38em;color:var(--ivory-dim);text-transform:uppercase;
+  transition:opacity .5s ease}
+#towerPanel{position:absolute;z-index:9;background:rgba(13,11,9,.78);backdrop-filter:blur(10px);
+  border:1px solid rgba(185,155,95,.35);padding:20px 22px;width:min(320px,86vw);
+  opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .3s ease,transform .3s ease}
+#towerPanel.on{opacity:1;pointer-events:auto;transform:none}
+#towerPanel .lvl{font-family:var(--serif);font-size:44px;line-height:1;color:var(--ivory);font-variant-numeric:tabular-nums}
+#towerPanel .lvl small{font-size:12px;letter-spacing:.3em;color:var(--gold);display:block;margin-bottom:6px;font-family:var(--sans)}
+#towerPanel .urow{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-top:1px solid rgba(185,155,95,.18);font-size:12px}
+#towerPanel .urow b{font-weight:500;color:var(--gold-hi);letter-spacing:.08em}
+#towerPanel .urow span{color:var(--ivory-dim);font-weight:300;text-align:right}
+#towerPanel .cta{margin-top:12px;font-size:10px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
+@media (min-width:821px){ #towerPanel{right:5vw;top:50%;margin-top:-140px} }
+@media (max-width:820px){ #towerPanel{left:4vw;right:4vw;bottom:3.5vh;width:auto} #towerPanel .lvl{font-size:34px} }
+/* ---------- FLOOR ---------- */
+#floorView{align-items:center;justify-content:flex-start;overflow-y:auto;padding:96px 5vw 40px}
+#floorView .fh{width:100%;max-width:1060px;display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid rgba(185,155,95,.3);padding-bottom:16px}
+#floorView h2{font-family:var(--serif);font-weight:400;font-size:clamp(30px,6vw,52px)}
+#floorView h2 small{display:block;font-family:var(--sans);font-size:10px;letter-spacing:.34em;color:var(--gold);margin-bottom:8px;text-transform:uppercase}
+.ucards{width:100%;max-width:1060px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:26px}
+.ucard{border:1px solid rgba(185,155,95,.3);background:rgba(255,255,255,.02);padding:22px;cursor:pointer;transition:border-color .25s,background .25s}
+.ucard:hover,.ucard:active{border-color:var(--gold-hi);background:rgba(185,155,95,.07)}
+.ucard .un{font-family:var(--serif);font-size:30px;color:var(--ivory)}
+.ucard .us{margin-top:8px;font-size:12px;color:var(--ivory-dim);line-height:1.8;font-weight:300}
+.ucard .up{margin-top:12px;font-size:13px;letter-spacing:.12em;color:var(--gold-hi)}
+.back{align-self:flex-start;margin-bottom:26px;background:none;border:1px solid rgba(185,155,95,.4);color:var(--gold);
+  font-family:var(--sans);font-size:10px;letter-spacing:.3em;padding:12px 20px;cursor:pointer;text-transform:uppercase}
+.back:active{background:rgba(185,155,95,.12)}
+/* ---------- UNIT ---------- */
+#unitView{overflow:hidden}
+#uHead{padding:84px 5vw 10px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 26px;z-index:5}
+#uHead .un{font-family:var(--serif);font-size:clamp(28px,5vw,42px);font-weight:400}
+#uHead .um{font-size:11px;letter-spacing:.18em;color:var(--ivory-dim);font-weight:300}
+#uTabs{display:flex;gap:0;padding:0 5vw;z-index:5;border-bottom:1px solid rgba(185,155,95,.25)}
+#uTabs button{background:none;border:none;border-bottom:2px solid transparent;color:var(--ivory-dim);
+  font-family:var(--sans);font-size:10px;letter-spacing:.18em;padding:12px 10px;cursor:pointer;text-transform:uppercase}
+#uTabs button.on{color:var(--gold-hi);border-bottom-color:var(--gold-hi)}
+.pane{flex:1;position:relative;display:none;min-height:0}
+.pane.on{display:block}
+#dollCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#dollNote{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:9px;letter-spacing:.24em;color:rgba(201,194,180,.75);pointer-events:none;text-transform:uppercase;padding:0 16px}
+#roomTip{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.22em;color:var(--gold-hi);
+  background:rgba(13,11,9,.7);padding:7px 14px;border:1px solid rgba(185,155,95,.4);opacity:0;transition:opacity .2s;pointer-events:none;text-transform:uppercase;white-space:nowrap}
+#rendersPane{overflow:hidden}
+.rslide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease;display:flex;align-items:center;justify-content:center;background:#000}
+.rslide.on{opacity:1}
+.rslide img{width:100%;height:100%;object-fit:cover}
+.rcap{position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(0deg,rgba(0,0,0,.75),transparent);
+  font-size:10px;letter-spacing:.2em;color:var(--ivory-dim);text-transform:uppercase}
+.rcap b{color:var(--gold-hi);font-weight:500}
+.minimap{position:absolute;left:12px;bottom:52px;z-index:5;background:rgba(13,11,9,.72);border:1px solid rgba(185,155,95,.4);padding:8px;backdrop-filter:blur(4px)}
+.rnav{position:absolute;top:50%;transform:translateY(-50%);z-index:4;background:rgba(13,11,9,.55);border:1px solid rgba(185,155,95,.4);
+  color:var(--gold-hi);width:42px;height:42px;border-radius:50%;font-size:16px;cursor:pointer}
+#rPrev{left:10px}#rNext{right:10px}
+#planPane{overflow-y:auto;padding:22px 5vw 40px}
+#planImg{width:100%;max-width:980px;display:block;margin:0 auto;border:1px solid rgba(185,155,95,.3);background:#fff}
+.specTable{max-width:980px;margin:22px auto 0;border-top:1px solid rgba(185,155,95,.3)}
+.specTable .sr{display:flex;justify-content:space-between;gap:16px;padding:11px 2px;border-bottom:1px solid rgba(185,155,95,.15);font-size:12px}
+.specTable .sr b{font-weight:500;color:var(--ivory)}
+.specTable .sr span{color:var(--ivory-dim);font-weight:300;text-align:right}
+.srcNote{max-width:980px;margin:14px auto 0;font-size:9px;letter-spacing:.22em;color:rgba(201,194,180,.6);text-transform:uppercase;line-height:1.9}
+#zoomFade{position:fixed;inset:0;background:var(--ink);z-index:60;pointer-events:none;opacity:0;transition:opacity .55s ease}
+#dollMode{position:absolute;top:10px;right:12px;z-index:6;display:flex;gap:6px}
+#dollMode button{font:600 10px/1 Montserrat,Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#e5cf9a;background:rgba(13,11,9,.72);border:1px solid rgba(185,155,95,.45);padding:9px 11px;cursor:pointer}
+#dollMode button.on{background:#b99b5f;color:#131110;border-color:#b99b5f}
+</style>
+</head>
+<body>
+
+<!-- ============ TOWER ============ -->
+<section class="screen on" id="towerView">
+  <div id="towerStage">
+    <img id="towerBg" alt="" aria-hidden="true">
+    <img id="towerImg" alt="Élodie, 439 East 77th Street — full building">
+    <div id="towerVeil"></div>
+    <div id="bandZone"></div>
+    <div id="band"></div>
+    <div id="bandRail"></div>
+    <div id="floorTag"></div>
+  </div>
+  <div class="brand"><div class="logo">ÉLODIE</div><div class="addr">439 EAST 77TH STREET</div></div>
+  <div id="towerHint">Select a floor</div>
+  <div id="towerPanel"></div>
+</section>
+
+<!-- ============ FLOOR ============ -->
+<section class="screen" id="floorView">
+  <button class="back" data-go="tower">&larr; Back to the tower</button>
+  <div class="fh"><h2 id="floorTitle"></h2></div>
+  <div class="ucards" id="floorCards"></div>
+</section>
+
+<!-- ============ UNIT ============ -->
+<section class="screen" id="unitView">
+  <div id="uHead"><span class="un" id="uName"></span><span class="um" id="uMeta"></span></div>
+  <div id="uTabs"></div>
+  <div class="pane" id="dollPane"><canvas id="dollCanvas"></canvas><div id="dollMode"><button id="mOrbit" class="on" type="button">Dollhouse</button><button id="mWalk" type="button">Walk inside</button></div><div id="roomTip"></div><div id="dollNote">Conceptual 3D model traced from the published plan sheet — finishes &amp; furniture illustrative</div></div>
+  <div class="pane" id="rendersPane"><button class="rnav" id="rPrev">&larr;</button><button class="rnav" id="rNext">&rarr;</button></div>
+  <div class="pane" id="planPane"><img id="planImg" alt="Official plan sheet"><div class="specTable" id="specTable"></div>
+    <div class="srcNote">Plan sheet and specifications as published on elodienyc.com · Conceptual 3D where indicated · Élodie, 439 East 77th Street, New York</div></div>
+  <div style="padding:0 5vw 18px;z-index:5"><button class="back" data-go="back">&larr; Back</button></div>
+</section>
+
+<div id="zoomFade"></div>
+
+<script>
+/* ================= DATA (verified from elodienyc.com published plan sheets, 2026-11-10) ================= */
+var LOCAL=true;
+var CDN="https://images.squarespace-cdn.com/content/v1/699dddb97eee257c67fbfa09/";
+var PRESS={"press_ph_bathroom.jpg":"https://thumbs.6sqft.com/wp-content/uploads/2026/09/06184206/439-East-77th-Street-Penthouse-Bathroom-Rendering.jpg",
+"press_triplex_living.jpg":"https://thumbs.6sqft.com/wp-content/uploads/2026/09/06184206/439-East-77th-Street-Living-Room-Rendering.jpg"};
+function rURL(path){
+  var f=path.indexOf("PRESS:")===0?path.slice(6):path.split("/")[1];
+  return "r_"+f.replace(/\.jpg$/,"")+".webp";
+}
+var HERO="r_v01_hero_final.webp";
+var PLANS={"1A":"ad5f71dd-6ba1-4dd5-a867-8bf9cc1b27f4","1B":"dd351556-19ca-444a-b010-4224d0d4675f","2A":"56af404c-5583-4db3-b030-ad90e3f11c0d","2B":"fa3a7d27-a491-4f63-ba63-ead928054436","3A":"42691246-959b-4648-bca9-093441bbe0b1","3B":"fa33f463-54ae-4f86-8c5f-844c7c55981f","3C":"3853d7cf-5527-4990-adce-e9ae08c6258d","4A":"b8e53449-b1d0-4f41-9111-8d06ae06f16d","4B":"8e691b41-8357-4a44-b1e7-53691e5645cc","4C":"c26dd363-7b11-43d7-acc9-fc049ce81bdb","5A":"491b18ed-8f96-4b63-864d-504085e0c7ae","5B":"e6e1e139-1487-443d-a713-e4820650d061","5C":"59dd59f8-6f70-4fed-8124-a76b096871e6","6A":"5ce8f835-3834-42d5-acbc-6ab2ce2d694b","6B":"7212970c-83ab-41ad-9598-32983763e434","PH1":"5d4e2752-18f1-411e-b9c5-84024f3e29a5"};
+var RENDERS_T=[["f8e1894c-3e38-4204-8871-ca1f01241a34/v09_kitchen_final.jpg","Kitchen","typical residence"],
+["e0082641-7688-4fd1-876d-b25ac69cdb10/v06_primary_bathroom_final.jpg","Primary bathroom","typical residence"],
+["c9ffda00-3e69-40f0-b196-42df5ccdd661/v12_ground_floor_living_final.jpg","Living","garden residence"]];
+var RENDERS_BY_KIND={T:0,PH:0,X:0};
+var RENDERS_PH=[["caa7448b-5e49-49f7-9cb6-adb74e5aebc6/v13_ph_kitchen_final.jpg","Kitchen","penthouse","elodienyc.com"],
+["8f228bc0-a51c-43e3-8219-a00104ed13a8/v14_ph_living_final.jpg","Living","penthouse","elodienyc.com"],
+["PRESS:press_ph_bathroom.jpg","Primary bathroom","penthouse","developer press render via 6sqft.com"]];
+var RENDERS_X=[["PRESS:press_triplex_living.jpg","Living room","garden triplex","developer press render via 6sqft.com"],
+["f8e1894c-3e38-4204-8871-ca1f01241a34/v09_kitchen_final.jpg","Kitchen","typical residence","elodienyc.com"],
+["e0082641-7688-4fd1-876d-b25ac69cdb10/v06_primary_bathroom_final.jpg","Primary bathroom","typical residence","elodienyc.com"]];
+function planURL(u){ return "p_"+u+".webp" }
+
+var UNITS={
+"1A":{floor:1,beds:"3 Bed",baths:"2 Bath · 2 Powder",sf:"2,914",ext:"1,159",price:"$5,995,000",psf:"$2,057",note:"Triplex, levels 1–3",renders:"X"},
+"1B":{floor:1,beds:"3 Bed",baths:"2 Bath · 2 Powder",sf:"2,938",ext:"1,159",price:"$5,995,000",psf:"$2,041",note:"Triplex",renders:"X"},
+"2A":{floor:2,beds:"1 Bed",baths:"1 Bath · 1 Powder",sf:"948",ext:"74",price:"$1,600,000",psf:"$1,688"},
+"2B":{floor:2,beds:"2 Bed",baths:"2 Bath",sf:"1,291",ext:"",price:"$2,400,000",psf:"$1,859"},
+"3A":{floor:3,beds:"3 Bed",baths:"3 Bath · 1 Powder",sf:"1,761",ext:"67",price:"$3,500,000",psf:"$1,988",doll:true,renders:"T"},
+"3B":{floor:3,beds:"2 Bed",baths:"2 Bath",sf:"1,282",ext:"67",price:"$2,550,000",psf:"$1,989",renders:"T"},
+"3C":{floor:3,beds:"2 Bed",baths:"2 Bath",sf:"1,188",ext:"67",price:"$2,000,000",psf:"$1,684",note:"Plan-sheet price; availability page lists $2,250,000",renders:"T"},
+"4A":{floor:4,beds:"3 Bed",baths:"2 Bath · 1 Powder",sf:"1,824",ext:"67",price:"$3,750,000",psf:"$2,056",renders:"T"},
+"4B":{floor:4,beds:"3 Bed",baths:"2 Bath · 1 Powder",sf:"1,807",ext:"67",price:"$3,750,000",psf:"$2,075",renders:"T"},
+"4C":{floor:4,beds:"1 Bed",baths:"1 Bath · 1 Powder",sf:"643",ext:"74",price:"$1,250,000",psf:"$1,944",renders:"T"},
+"5A":{floor:5,beds:"3 Bed",baths:"2 Bath · 1 Powder",sf:"1,824",ext:"67",price:"$3,800,000",psf:"$2,083",renders:"T"},
+"5B":{floor:5,beds:"3 Bed",baths:"2 Bath · 1 Powder",sf:"1,807",ext:"67",price:"$3,800,000",psf:"$2,103",renders:"T"},
+"5C":{floor:5,beds:"1 Bed",baths:"1 Bath · 1 Powder",sf:"643",ext:"74",price:"$1,300,000",psf:"$2,022",renders:"T"},
+"6A":{floor:6,beds:"4 Bed",baths:"2 Bath · 1 Powder",sf:"2,026",ext:"166",price:"$4,500,000",psf:"$2,221",renders:"T"},
+"6B":{floor:6,beds:"4 Bed",baths:"2 Bath · 1 Powder",sf:"2,038",ext:"166",price:"$4,500,000",psf:"$2,208",renders:"T"},
+"PH1":{floor:7,beds:"3 Bed",baths:"3 Bath · 1 Powder",sf:"3,712",ext:"1,270",price:"$8,500,000",psf:"$2,290",doll:true,renders:"PH",note:"Full-floor penthouse · roof terrace"}
+};
+var FLOORS=[[1,"01"],[2,"02"],[3,"03"],[4,"04"],[5,"05"],[6,"06"],[7,"PH"]];
+function unitsOn(f){return Object.keys(UNITS).filter(function(u){return UNITS[u].floor===f})}
+
+/* Tower calibration on the hero image (fractions of the image, measured): roof/ground Y, facade X extent */
+var CAL={roof:0.177, ground:0.85, x0:0.28, x1:0.72, n:7};
+
+/* ================= INTERIOR LAYOUTS (traced from published plan sheets; feet) ================= */
+var OAK="oak",STONE="stone",DECK="deck";
+var INTERIORS= {
+    "3A": {
+      unit:"3A", level:"Level 3", ch:9.5, W:27.5, D:64,
+      meta:"3 Bed · 3 Bath · 1 Powder · 1,761 SF interior · 67 SF balcony",
+      rooms:[
+        {n:"Bedroom 2",  d:"10′9″ × 16′1″", x:0,     z:0,     w:10.75, dp:16.08, f:OAK},
+        {n:"Bath",       d:"",              x:10.75, z:0,     w:4.42,  dp:9,     f:STONE, small:1},
+        {n:"W.I.C.",     d:"",              x:10.75, z:9,     w:4.42,  dp:7.08,  f:OAK,   small:1},
+        {n:"Bedroom 3",  d:"12′4″ × 19′10″",x:15.17, z:0,     w:12.33, dp:19.83, f:OAK},
+        {n:"Corridor",   d:"",              x:11,    z:16.08, w:4.17,  dp:17.92, f:OAK,   small:1},
+        {n:"Bath 2",     d:"",              x:15.5,  z:19.83, w:8,     dp:8,     f:STONE, small:1},
+        {n:"Bath 3",     d:"",              x:15.5,  z:27.83, w:8,     dp:6,     f:STONE, small:1},
+        {n:"Closet",     d:"",              x:23.5,  z:19.83, w:4,     dp:14,    f:OAK,   small:1},
+        {n:"Powder",     d:"",              x:4.5,   z:19.5,  w:5,     dp:6.5,   f:STONE, small:1},
+        {n:"Closets",    d:"",              x:0,     z:26,    w:11,    dp:8,     f:OAK,   small:1},
+        {n:"Hall",       d:"",              x:0,     z:34,    w:11.17, dp:10,    f:OAK,   small:1},
+        {n:"Bedroom 1",  d:"11′2″ × 15′4″", x:0,     z:44,    w:11.17, dp:15.33, f:OAK},
+        {n:"Bath",       d:"",              x:0,     z:59.33, w:11.17, dp:4.67,  f:STONE, small:1},
+        {n:"Living / Dining / Kitchen", d:"15′9″ × 30′0″", x:11.75, z:34, w:15.75, dp:30, f:OAK},
+        {n:"Balcony",    d:"16′9″ × 4′0″",  x:10,    z:64,    w:16.75, dp:4,     f:DECK}
+      ],
+      /* [x1,z1,x2,z2,[[gapStart,gapEnd],…]] in feet along the run */
+      walls:[
+        [0,16.08,10.75,16.08,[[7.2,10.2]]],
+        [10.75,0,10.75,16.08,[[2.4,5.2]]],
+        [10.75,9,15.17,9,[]],
+        [15.17,0,15.17,19.83,[[14.2,17.2]]],
+        [15.17,19.83,27.5,19.83,[]],
+        [11,16.08,11,34,[[11.4,14.4]]],
+        [15.5,19.83,15.5,34,[[2,4.6],[9.5,12.1]]],
+        [15.5,27.83,23.5,27.83,[]],
+        [15.5,33.83,27.5,33.83,[]],
+        [23.5,19.83,23.5,33.83,[[5.5,8.1]]],
+        [4.5,19.5,9.5,19.5,[]],
+        [4.5,19.5,4.5,26,[]],
+        [9.5,19.5,9.5,26,[]],
+        [4.5,26,9.5,26,[[1.2,3.8]]],
+        [0,34,11.17,34,[[6.5,9.9]]],
+        [11.17,34,11.17,64,[[4,7],[16,19]]],
+        [0,44,11.17,44,[[7.4,10.4]]],
+        [0,59.33,11.17,59.33,[[1.2,4]]]
+      ],
+      glass:[
+        {side:"n", a:0,     b:10.75, p:3},
+        {side:"n", a:15.17, b:27.5,  p:4},
+        {side:"s", a:0,     b:11.17, p:3},
+        {side:"s", a:11.75, b:27.5,  p:5}
+      ],
+      furn:[
+        {k:"bed",     x:3.2,  z:48,   w:5,   dp:6.6, rot:1},
+        {k:"bed",     x:3,    z:3.5,  w:5,   dp:6.6, rot:1},
+        {k:"bed",     x:18.3, z:4,    w:5,   dp:6.6, rot:1},
+        {k:"sofa",    x:13.2, z:50.5, w:8.6, dp:3.1},
+        {k:"table",   x:17,   z:56.5, w:4.4, dp:2.4},
+        {k:"dining",  x:14.2, z:41,   w:7.2, dp:3.4},
+        {k:"counter", x:12.1, z:34.6, w:15,  dp:2.1},
+        {k:"island",  x:15.6, z:38.2, w:7.4, dp:3},
+        {k:"vanity",  x:16,   z:20.3, w:5,   dp:1.9},
+        {k:"tub",     x:16,   z:24.6, w:5.4, dp:2.6},
+        {k:"vanity",  x:16,   z:28.4, w:5,   dp:1.9},
+        {k:"vanity",  x:5,    z:20,   w:3.4, dp:1.7},
+        {k:"vanity",  x:1.2,  z:60,   w:5,   dp:1.9},
+        {k:"vanity",  x:11.3, z:0.6,  w:3.4, dp:1.7}
+      ],
+      start:{x:18.4, z:70.5, y:5.5, yaw:0,     pitch:-0.04},
+      arrive:{x:18.4, z:56,  y:5.4, yaw:0,     pitch:-0.02},
+      tour:[
+        {x:18.4, z:56,  yaw:0,     pitch:-0.02, hold:1.1},
+        {x:18.4, z:44,  yaw:-0.5,  pitch:-0.02, hold:1.0},
+        {x:13.6, z:36.5,yaw:0.9,   pitch:-0.05, hold:1.0},
+        {x:13.2, z:26,  yaw:0.05,  pitch:0,     hold:0.9},
+        {x:13.2, z:17,  yaw:-0.75, pitch:-0.02, hold:1.0},
+        {x:5.6,  z:50,  yaw:1.6,   pitch:-0.02, hold:1.1}
+      ]
+    },
+
+    "PH1": {
+      unit:"PH1", level:"Penthouse · Level 7", ch:10, W:70.5, D:53,
+      meta:"3 Bed · 3 Bath · 1 Powder · 3,712 SF interior · 1,270 SF exterior",
+      rooms:[
+        {n:"Bedroom 1",  d:"10′5″ × 27′4″", x:0,     z:0,     w:10.42, dp:27.33, f:OAK},
+        {n:"Bath",       d:"",              x:10.42, z:0,     w:6.5,   dp:14,    f:STONE, small:1},
+        {n:"W.I.C.",     d:"",              x:10.42, z:14,    w:6.5,   dp:13.33, f:OAK,   small:1},
+        {n:"Bedroom 2",  d:"10′0″ × 16′2″", x:17.5,  z:0,     w:10,    dp:16.17, f:OAK},
+        {n:"Bath",       d:"",              x:17.5,  z:16.17, w:10,    dp:7,     f:STONE, small:1},
+        {n:"Gallery",    d:"",              x:28,    z:0,     w:20.5,  dp:10,    f:OAK,   small:1},
+        {n:"Elevator Vestibule", d:"",      x:29.5,  z:10,    w:10,    dp:9,     f:STONE, small:1},
+        {n:"Laundry",    d:"",              x:39.5,  z:10,    w:6,     dp:9,     f:STONE, small:1},
+        {n:"Refuse",     d:"",              x:45.5,  z:10,    w:4,     dp:9,     f:STONE, small:1},
+        {n:"Powder",     d:"",              x:30,    z:19.5,  w:5.5,   dp:7,     f:STONE, small:1},
+        {n:"Bedroom 3",  d:"20′9″ × 17′6″", x:49.75, z:0,     w:20.75, dp:17.5,  f:OAK},
+        {n:"Bath",       d:"",              x:49.75, z:17.5,  w:10,    dp:10,    f:STONE, small:1},
+        {n:"W.I.C.",     d:"",              x:59.75, z:17.5,  w:5.4,   dp:10,    f:OAK,   small:1},
+        {n:"W.I.C.",     d:"",              x:65.15, z:17.5,  w:5.35,  dp:10,    f:OAK,   small:1},
+        {n:"Family Room",   d:"15′11″ × 20′9″", x:0,  z:32,   w:15.92, dp:20.75, f:OAK},
+        {n:"Kitchen / Dining", d:"30′0″ × 12′9″", x:17, z:40, w:30,    dp:12.75, f:OAK},
+        {n:"Living Room",   d:"22′1″ × 23′5″", x:48, z:29.5,  w:22.08, dp:23.4,  f:OAK},
+        {n:"Terrace",    d:"70′6″ × 10′0″", x:0,     z:53,    w:70.5,  dp:10,    f:DECK}
+      ],
+      walls:[
+        [10.42,0,10.42,27.33,[[16.4,19.4]]],
+        [10.42,14,16.92,14,[]],
+        [16.92,0,16.92,27.33,[[3.6,6.4]]],
+        [17.5,16.17,27.5,16.17,[[1.4,4.2]]],
+        [27.5,0,27.5,19.5,[[11.6,14.4]]],
+        [28,10,48.5,10,[[8.5,11.5]]],
+        [29.5,10,29.5,19,[]],
+        [39.5,10,39.5,19,[[2,4.6]]],
+        [45.5,10,45.5,19,[[2,4.6]]],
+        [29.5,19,49.5,19,[]],
+        [30,19.5,30,26.5,[]],
+        [35.5,19.5,35.5,26.5,[]],
+        [30,26.5,35.5,26.5,[[1.2,3.8]]],
+        [48.5,0,48.5,29.5,[[21.6,24.6]]],
+        [49.75,17.5,70.5,17.5,[[13.4,16.2]]],
+        [59.75,17.5,59.75,27.5,[]],
+        [65.15,17.5,65.15,27.5,[]],
+        [16,32,16,53,[[6.4,9.4]]],
+        [0,32,16,32,[[11.4,14.4]]],
+        [47,19,47,53,[[18.5,22.5]]],
+        [17,40,47,40,[[12,16]]]
+      ],
+      glass:[
+        {side:"n", a:0,  b:10.42, p:3},
+        {side:"n", a:17.5, b:27.5, p:3},
+        {side:"n", a:49.75, b:70.5, p:6},
+        {side:"s", a:0,  b:70.5,  p:18},
+        {side:"w", a:32, b:52.75, p:6},
+        {side:"e", a:29.5, b:52.9, p:6}
+      ],
+      furn:[
+        {k:"bed",     x:2.4,  z:14,   w:5,    dp:6.6, rot:1},
+        {k:"bed",     x:19.8, z:3.4,  w:5,    dp:6.6, rot:1},
+        {k:"bed",     x:56,   z:3.6,  w:6,    dp:6.8, rot:1},
+        {k:"sofa",    x:52,   z:46,   w:11,   dp:3.3},
+        {k:"sofa",    x:64.5, z:36,   w:3.3,  dp:8.5},
+        {k:"table",   x:56.5, z:39.5, w:5.2,  dp:3},
+        {k:"sofa",    x:2.2,  z:46,   w:10.4, dp:3.2},
+        {k:"table",   x:5.4,  z:40,   w:4.6,  dp:2.6},
+        {k:"dining",  x:30,   z:44,   w:11,   dp:3.8},
+        {k:"counter", x:17.6, z:40.7, w:12,   dp:2.2},
+        {k:"island",  x:18.6, z:46.5, w:10,   dp:3.3},
+        {k:"vanity",  x:11,   z:0.7,  w:5.4,  dp:1.9},
+        {k:"tub",     x:11,   z:9.5,  w:5.6,  dp:2.7},
+        {k:"vanity",  x:18.2, z:16.8, w:5,    dp:1.9},
+        {k:"vanity",  x:50.4, z:18.2, w:5.6,  dp:1.9},
+        {k:"tub",     x:50.4, z:24,   w:5.8,  dp:2.7},
+        {k:"vanity",  x:30.6, z:20.1, w:3.6,  dp:1.7},
+        {k:"planter", x:4,    z:60.5, w:6,    dp:2.4},
+        {k:"planter", x:32,   z:60.5, w:7,    dp:2.4},
+        {k:"planter", x:60,   z:60.5, w:7,    dp:2.4},
+        {k:"sofa",    x:20,   z:56,   w:8,    dp:3},
+        {k:"dining",  x:45,   z:55.5, w:9,    dp:3.6}
+      ],
+      roofTerrace:{x:14, z:54.5, w:40, dp:14, label:"Roof Terrace · 562 SF"},
+      start:{x:35, z:62,  y:5.6, yaw:0,    pitch:-0.05},
+      arrive:{x:52, z:45, y:5.5, yaw:-0.3, pitch:-0.02},
+      tour:[
+        {x:56,  z:44,   yaw:-0.35, pitch:-0.02, hold:1.2},
+        {x:40,  z:47.5, yaw:0.45,  pitch:-0.03, hold:1.0},
+        {x:24,  z:47,   yaw:0.1,   pitch:-0.02, hold:1.0},
+        {x:7,   z:42,   yaw:-0.2,  pitch:-0.02, hold:1.0},
+        {x:34,  z:22,   yaw:-0.1,  pitch:-0.02, hold:1.0},
+        {x:58,  z:12,   yaw:0.2,   pitch:-0.02, hold:1.1},
+        {x:35,  z:59,   yaw:1.5,   pitch:-0.04, hold:1.2}
+      ]
+    }
+  };
+
+
+/* Tour stops: render index + position on the traced plan (feet) */
+var TOUR_STOPS={
+ "3A":[{i:0,x:17,z:39},{i:1,x:5.5,z:61.5}],
+ "PH1":[{i:0,x:32,z:46},{i:1,x:59,z:41},{i:2,x:13.7,z:7}]
+};
+
+/* ================= ROUTER ================= */
+var S={unit:null,floor:null};
+function go(name){location.hash=name}
+function route(){
+  var h=location.hash||"#/tower";
+  var m;
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("on")});
+  if(m=h.match(/^#\/unit\/(\w+)(?:\/(\w+))?/)){ showUnit(m[1],m[2]||null) }
+  else if(m=h.match(/^#\/floor\/(\d+)/)){ showFloor(+m[1]) }
+  else { showTower() }
+}
+window.addEventListener("hashchange",route);
+
+/* ================= TOWER ================= */
+var tImg=document.getElementById("towerImg"), bandZone=document.getElementById("bandZone"),
+    band=document.getElementById("band"), rail=document.getElementById("bandRail"),
+    tag=document.getElementById("floorTag"), panel=document.getElementById("towerPanel"),
+    hint=document.getElementById("towerHint"), stage=document.getElementById("towerStage");
+tImg.src=HERO;
+document.getElementById("towerBg").src=HERO;
+var selFloor=0, bRect=null;
+function fitMode(){ return "contain" }
+function imgRect(){
+  var vw=stage.clientWidth, vh=stage.clientHeight, iw=tImg.naturalWidth||1500, ih=tImg.naturalHeight||1970;
+  var contain=fitMode()==="contain";
+  var s=contain?Math.min(vw/iw,vh/ih):Math.max(vw/iw,vh/ih), w=iw*s, h=ih*s;
+  tImg.style.objectFit=contain?"contain":"cover";
+  return {x:(vw-w)/2, y:(vh-h)/2, w:w, h:h}
+}
+function buildBandZone(){
+  var r=imgRect();
+  var bx=r.x+r.w*CAL.x0, bw=r.w*(CAL.x1-CAL.x0);
+  var by=r.y+r.h*CAL.roof, bh=r.h*(CAL.ground-CAL.roof);
+  bRect={x:bx,y:by,w:bw,h:bh,fh:bh/CAL.n};
+  bandZone.style.left=bx+"px"; bandZone.style.top=by+"px";
+  bandZone.style.width=bw+"px"; bandZone.style.height=bh+"px";
+}
+window.addEventListener("resize",buildBandZone);
+tImg.addEventListener("load",buildBandZone);
+function floorFromY(cy){
+  if(!bRect) return 0;
+  var y=(cy-bRect.y)/bRect.h; if(y<0||y>1) return 0;
+  return Math.min(CAL.n, Math.max(1, CAL.n-Math.floor(y*CAL.n)));
+}
+function paintBand(f){
+  selFloor=f;
+  if(!f){band.style.opacity=0;tag.style.opacity=0;rail.style.opacity=0;panel.classList.remove("on");hint.style.opacity=1;return}
+  hint.style.opacity=0;
+  var top=bRect.y+bRect.h-(f)*bRect.fh;
+  band.style.left=bRect.x+"px"; band.style.width=bRect.w+"px";
+  band.style.top=top+"px"; band.style.height=bRect.fh+"px"; band.style.opacity=1;
+  /* rail to panel */
+  var desktop=window.innerWidth>820;
+  var ry=top+bRect.fh/2;
+  rail.style.opacity=1;
+  if(desktop){
+    rail.style.left=(bRect.x+bRect.w)+"px"; rail.style.top=ry+"px";
+    rail.style.width=(window.innerWidth*0.95-320-(bRect.x+bRect.w))+"px"; rail.style.height="1px";
+    tag.style.left=(bRect.x+bRect.w+8)+"px"; tag.style.top=(ry-16)+"px";
+  }else{
+    rail.style.left=bRect.x+"px"; rail.style.top=ry+"px"; rail.style.width="1px"; rail.style.height="1px";
+    tag.style.left=(bRect.x+10)+"px"; tag.style.top=(ry-14)+"px";
+  }
+  tag.style.opacity=1;
+  var nm=f===7?"PH":("0"+f).slice(-2);
+  tag.textContent="LEVEL "+nm;
+  var us=unitsOn(f);
+  panel.innerHTML='<div class="lvl"><small>LEVEL</small>'+nm+'</div>'+
+    us.map(function(u){var d=UNITS[u];return '<div class="urow"><b>'+u+'</b><span>'+d.beds+' · '+d.sf+' SF · '+d.price+(d.note?'*':'')+'</span></div>'}).join("")+(us.some(function(u){return UNITS[u].note})?'<div style="font-size:9px;letter-spacing:.14em;color:#c9c2b4;margin-top:6px">* '+us.filter(function(u){return UNITS[u].note}).map(function(u){return u+': '+UNITS[u].note}).join(' · ')+'</div>':'')+
+    '<div class="cta">Tap to enter this level &rarr;</div>';
+  panel.classList.add("on");
+}
+var bandStartY=null;
+bandZone.addEventListener("pointermove",function(e){ if(e.pointerType==="mouse") paintBand(floorFromY(e.clientY)) });
+bandZone.addEventListener("pointerdown",function(e){ bandStartY=e.clientY; paintBand(floorFromY(e.clientY)) });
+bandZone.addEventListener("pointerup",function(e){
+  var f=floorFromY(e.clientY);
+  if(f && f===selFloor && Math.abs(e.clientY-bandStartY)<8){ enterFloor(f) }
+});
+bandZone.addEventListener("pointerleave",function(){ if(matchMedia("(pointer:fine)").matches) paintBand(0) });
+
+function enterFloor(f){
+  /* zoom into the band, then crossfade to the floor view */
+  var top=bRect.y+bRect.h-f*bRect.fh, cy=top+bRect.fh/2;
+  var vw=stage.clientWidth, vh=stage.clientHeight;
+  var scale=Math.min(6, vh/(bRect.fh*1.6));
+  tImg.style.transformOrigin=((bRect.x+bRect.w/2)/vw*100)+"% "+(cy/vh*100)+"%";
+  tImg.style.transform="scale("+scale+")";
+  var zf=document.getElementById("zoomFade"); zf.style.opacity=1;
+  setTimeout(function(){ go("/floor/"+f); },620);
+  setTimeout(function(){ tImg.style.transform=""; zf.style.opacity=0; },1250);
+}
+function showTower(){
+  document.getElementById("towerView").classList.add("on");
+  requestAnimationFrame(buildBandZone);
+  var bt=(location.hash.match(/bandtest=(\d)/)||[])[1];
+  if(bt){ var iv=setInterval(function(){ if(bRect){clearInterval(iv); paintBand(+bt)} },200) }
+}
+
+/* ================= FLOOR ================= */
+function showFloor(f){
+  S.floor=f;
+  var nm=f===7?"Penthouse":("Level "+("0"+f).slice(-2));
+  document.getElementById("floorTitle").innerHTML="<small>"+(f===7?"Level 07 · Full floor":"Residences")+"</small>"+nm;
+  document.getElementById("floorCards").innerHTML=unitsOn(f).map(function(u){
+    var d=UNITS[u];
+    return '<div class="ucard" onclick="go(\'/unit/'+u+'\')"><div class="un">'+u+'</div>'+
+      '<div class="us">'+d.beds+' · '+d.baths+'<br>'+d.sf+' SF interior'+(d.ext?' · '+d.ext+' SF exterior':'')+(d.note?'<br>'+d.note:'')+'</div>'+
+      '<div class="up">'+d.price+'</div></div>'
+  }).join("");
+  document.getElementById("floorView").classList.add("on");
+}
+
+/* ================= UNIT ================= */
+var doll={inited:false,renderer:null,scene:null,cam:null,group:null,az:0.6,tAz:0.6,raf:0,pickList:[],center:null,R:1,mode:"orbit",walk:null,hot:[],unit:null};
+function showUnit(u,tab){
+  S.unit=u; var d=UNITS[u];
+  document.getElementById("uName").textContent="Residence "+u;
+  document.getElementById("uMeta").textContent="Level "+(d.floor===7?"7 · Penthouse":("0"+d.floor).slice(-2))+" · "+d.beds+" · "+d.baths+" · "+d.sf+" SF interior"+(d.ext?" · "+d.ext+" SF exterior":"");
+  var tabs=[];
+  if(d.doll&&INTERIORS[u]) tabs.push(["dollhouse","Dollhouse"]);
+  if(d.renders) tabs.push(["renders","Renders"]);
+  tabs.push(["plan","Plan & specs"]);
+  var bar=document.getElementById("uTabs");
+  bar.innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'">'+t[1]+'</button>'}).join("");
+  bar.querySelectorAll("button").forEach(function(b){b.onclick=function(){go("/unit/"+u+"/"+b.dataset.tab)}});
+  tab=tab||tabs[0][0];
+  bar.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.tab===tab)});
+  document.querySelectorAll(".pane").forEach(function(p){p.classList.remove("on")});
+  if(tab==="walk"&&d.doll&&INTERIORS[u]){ tab="dollhouse"; document.getElementById("dollPane").classList.add("on"); startDoll(u,"walk") }
+  else if(tab==="dollhouse"&&d.doll&&INTERIORS[u]){ document.getElementById("dollPane").classList.add("on"); startDoll(u,"orbit") }
+  else if(tab==="renders"&&d.renders){ document.getElementById("rendersPane").classList.add("on"); buildRenders(d.renders) }
+  else { document.getElementById("planPane").classList.add("on"); buildPlan(u) }
+  document.getElementById("unitView").classList.add("on");
+  stopDollIf(tab!=="dollhouse");
+}
+
+/* ---------- renders carousel ---------- */
+var rIdx=0,rSet=[];
+function buildRenders(kind){
+  rSet=(kind==="PH"?RENDERS_PH:(kind==="X"?RENDERS_X:RENDERS_T)); rIdx=0;
+  var pane=document.getElementById("rendersPane");
+  pane.querySelectorAll(".rslide,.minimap").forEach(function(s){s.remove()});
+  var stops=TOUR_STOPS[S.unit], L=INTERIORS[S.unit];
+  if(stops&&L){
+    var mm=document.createElement("div"); mm.className="minimap";
+    var sc=Math.min(110/L.W, 150/L.D), ww=L.W*sc, hh=L.D*sc;
+    var svg='<svg width="'+ww.toFixed(0)+'" height="'+hh.toFixed(0)+'" viewBox="0 0 '+L.W+' '+L.D+'" style="display:block">';
+    L.rooms.forEach(function(r){ svg+='<rect x="'+r.x+'" y="'+r.z+'" width="'+r.w+'" height="'+r.dp+'" fill="none" stroke="rgba(229,207,154,.45)" stroke-width="0.35"/>'; });
+    stops.forEach(function(st,k){ svg+='<circle class="mdot" data-k="'+k+'" cx="'+st.x+'" cy="'+st.z+'" r="1.7" fill="'+(k===0?"#e5cf9a":"rgba(229,207,154,.4)")+'" style="cursor:pointer"/>'; });
+    svg+='</svg>';
+    mm.innerHTML=svg;
+    mm.querySelectorAll(".mdot").forEach(function(d){ d.addEventListener("click",function(){ rGoTo(+d.dataset.k) }); });
+    pane.appendChild(mm);
+  }
+  rSet.forEach(function(r,i){
+    var s=document.createElement("div"); s.className="rslide"+(i===0?" on":"");
+    var img=new Image(); img.src=rURL(r[0]); img.alt=r[1];
+    img.onerror=function(){ s.style.display="none" };
+    s.appendChild(img);
+    var cap=document.createElement("div"); cap.className="rcap";
+    cap.innerHTML="<b>Official render</b> — "+r[1]+" · "+r[2]+" — "+(r[3]||"elodienyc.com");
+    s.appendChild(cap); pane.appendChild(s);
+  });
+}
+function rGo(d){ rGoTo((rIdx+d+rSet.length)%rSet.length) }
+function rGoTo(n){
+  if(!rSet.length) return;
+  var slides=document.querySelectorAll("#rendersPane .rslide");
+  slides[rIdx].classList.remove("on");
+  rIdx=n;
+  slides[rIdx].classList.add("on");
+  document.querySelectorAll("#rendersPane .mdot").forEach(function(d,k){
+    d.setAttribute("fill", k===rIdx ? "#e5cf9a" : "rgba(229,207,154,.4)");
+  });
+}
+document.getElementById("rPrev").onclick=function(){rGo(-1)};
+document.getElementById("rNext").onclick=function(){rGo(1)};
+var rx0=null;
+document.getElementById("rendersPane").addEventListener("pointerdown",function(e){rx0=e.clientX});
+document.getElementById("rendersPane").addEventListener("pointerup",function(e){
+  if(rx0===null)return; var dx=e.clientX-rx0; if(Math.abs(dx)>40) rGo(dx<0?1:-1); rx0=null;
+});
+
+/* ---------- plan & specs ---------- */
+function buildPlan(u){
+  var d=UNITS[u];
+  var img=document.getElementById("planImg");
+  img.src=planURL(u);
+  var rows=[["Residence",u],["Level",d.floor===7?"7 · Penthouse":String(d.floor)],["Layout",d.beds+" · "+d.baths],
+    ["Interior",d.sf+" SF"]];
+  if(d.ext) rows.push(["Exterior",d.ext+" SF"]);
+  rows.push(["Price",d.price],["Price / SF",d.psf]);
+  if(d.note) rows.push(["Note",d.note]);
+  document.getElementById("specTable").innerHTML=rows.map(function(r){return '<div class="sr"><b>'+r[0]+'</b><span>'+r[1]+'</span></div>'}).join("");
+}
+
+/* ---------- dollhouse + first-person walk (traced geometry) ---------- */
+function startDoll(u,mode){
+  doll.unit=u; doll.mode=mode||"orbit";
+  document.getElementById("mOrbit").classList.toggle("on",doll.mode==="orbit");
+  document.getElementById("mWalk").classList.toggle("on",doll.mode==="walk");
+  document.getElementById("dollNote").textContent=doll.mode==="walk"?
+    "Conceptual walkthrough — traced from the published plan sheet · finishes illustrative · drag to look, tap a gold marker to move":
+    "Conceptual 3D model traced from the published plan sheet — finishes & furniture illustrative";
+  var L=INTERIORS[u];
+  var cv=document.getElementById("dollCanvas");
+  if(!doll.inited){
+    doll.inited=true;
+    doll.renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+    doll.renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+    doll.renderer.shadowMap.enabled=true;
+    doll.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    doll.renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    doll.renderer.toneMappingExposure=0.92;
+    var px=0,py=0,drag=false,moved=0;
+    cv.addEventListener("pointerdown",function(e){drag=true;moved=0;px=e.clientX;py=e.clientY;cv.setPointerCapture(e.pointerId)});
+    cv.addEventListener("pointermove",function(e){
+      if(!drag) return;
+      var dx=e.clientX-px, dy=e.clientY-py; moved+=Math.abs(dx)+Math.abs(dy);
+      if(doll.mode==="walk"&&doll.walk){
+        doll.walk.yaw-=dx*0.0042;
+        doll.walk.pitch=Math.max(-1.05,Math.min(1.05,doll.walk.pitch-dy*0.0042));
+      } else doll.tAz+=dx*0.008;
+      px=e.clientX; py=e.clientY;
+    });
+    cv.addEventListener("pointerup",function(e){drag=false; if(moved<8) tapPick(e)});
+    document.getElementById("mOrbit").addEventListener("click",function(){ startDoll(doll.unit,"orbit") });
+    document.getElementById("mWalk").addEventListener("click",function(){ startDoll(doll.unit,"walk") });
+  }
+  if(doll.raf) cancelAnimationFrame(doll.raf);
+  doll.scene=new THREE.Scene();
+  doll.scene.background=new THREE.Color(0x16100d);
+  doll.group=new THREE.Group(); doll.scene.add(doll.group);
+  doll.pickList=[]; doll.hot=[];
+  buildUnit(doll.group,L,doll.mode==="walk");
+  /* lights */
+  var hemi=new THREE.HemisphereLight(0xfff6e8,0x35302a,doll.mode==="walk"?0.55:1.0); doll.scene.add(hemi);
+  if(doll.mode==="walk") doll.scene.add(new THREE.AmbientLight(0xfff1dc,0.28));
+  var sun=new THREE.DirectionalLight(0xfff2dd,doll.mode==="walk"?1.15:1.45);
+  sun.position.set(doll.center.x+30,70,L.D+45); sun.target.position.set(doll.center.x,0,doll.center.z);
+  sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  var sc=doll.R+8;
+  sun.shadow.camera.left=-sc;sun.shadow.camera.right=sc;sun.shadow.camera.top=sc;sun.shadow.camera.bottom=-sc;
+  sun.shadow.camera.far=400; sun.shadow.bias=-0.0004;
+  doll.scene.add(sun); doll.scene.add(sun.target);
+  if(doll.mode==="walk"){
+    setupWalk(L);
+    doll.cam=new THREE.PerspectiveCamera(72,1,0.1,500);
+  } else {
+    doll.cam=new THREE.OrthographicCamera(-1,1,1,-1,0.1,600);
+    doll.spin=true;
+  }
+  sizeDoll();
+  var EYE=5.1;
+  (function loop(){
+    doll.raf=requestAnimationFrame(loop);
+    if(doll.mode==="walk"&&doll.walk){
+      var wk=doll.walk;
+      if(wk.anim){
+        var a=wk.anim; a.t+=0.028;
+        var p0=a.pts[a.seg], p1=a.pts[a.seg+1];
+        var tt=Math.min(1,a.t), e=tt*tt*(3-2*tt);
+        wk.pos.set(p0.x+(p1.x-p0.x)*e,0,p0.z+(p1.z-p0.z)*e);
+        var ty=Math.atan2(-(p1.x-p0.x),-(p1.z-p0.z));
+        var d=ty-wk.yaw; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+        wk.yaw+=d*0.07;
+        if(tt>=1){ a.seg++; a.t=0; if(a.seg>=a.pts.length-1) wk.anim=null; }
+      }
+      doll.cam.position.set(wk.pos.x,EYE,wk.pos.z);
+      doll.cam.rotation.order="YXZ";
+      doll.cam.rotation.y=wk.yaw; doll.cam.rotation.x=wk.pitch; doll.cam.rotation.z=0;
+      doll.hot.forEach(function(h,i){ h.visible=(i!==wk.cur); });
+    } else {
+      if(doll.spin) doll.tAz+=0.0022;
+      doll.az+=(doll.tAz-doll.az)*0.08;
+      var R=doll.R, az=doll.az, el=0.68;
+      doll.cam.position.set(doll.center.x+Math.sin(az)*Math.cos(el)*R*3, R*3*Math.sin(el), doll.center.z+Math.cos(az)*Math.cos(el)*R*3);
+      doll.cam.lookAt(doll.center.x,0,doll.center.z);
+    }
+    doll.renderer.render(doll.scene,doll.cam);
+  })();
+}
+function stopDollIf(off){ if(off&&doll.raf){cancelAnimationFrame(doll.raf);doll.raf=0} }
+function sizeDoll(){
+  if(!doll.cam) return;
+  var cv=document.getElementById("dollCanvas");
+  var w=cv.clientWidth||300,h=cv.clientHeight||300;
+  doll.renderer.setSize(w,h,false);
+  if(doll.cam.isPerspectiveCamera){ doll.cam.aspect=w/h; }
+  else {
+    var R=doll.R*1.02, a=w/h;
+    if(a>=1){ doll.cam.left=-R*a; doll.cam.right=R*a; doll.cam.top=R; doll.cam.bottom=-R; }
+    else { doll.cam.left=-R; doll.cam.right=R; doll.cam.top=R/a; doll.cam.bottom=-R/a; }
+  }
+  doll.cam.updateProjectionMatrix();
+}
+window.addEventListener("resize",sizeDoll);
+function makeTex(kind){
+  var c=document.createElement("canvas"); c.width=c.height=256; var x=c.getContext("2d");
+  var seed=13; function rnd(){ seed=(seed*16807)%2147483647; return seed/2147483647; }
+  if(kind==="oak"){
+    x.fillStyle="#c8a878"; x.fillRect(0,0,256,256);
+    for(var r=0;r<8;r++){ var off=(r%2)*64;
+      for(var p=-1;p<3;p++){ var l=30+rnd()*25;
+        x.fillStyle="rgba("+(120+l|0)+","+(85+l*0.7|0)+","+(45+l*0.5|0)+",0.5)";
+        x.fillRect(p*128+off+2,r*32+2,124,28); } }
+    x.strokeStyle="rgba(80,55,30,.55)"; x.lineWidth=2;
+    for(r=0;r<=8;r++){ x.beginPath(); x.moveTo(0,r*32); x.lineTo(256,r*32); x.stroke(); }
+  } else if(kind==="stone"){
+    x.fillStyle="#d8d4cc"; x.fillRect(0,0,256,256);
+    for(var i=0;i<42;i++){ x.fillStyle="rgba(255,255,255,"+(rnd()*0.12)+")"; var q=10+rnd()*40; x.fillRect(rnd()*256,rnd()*256,q,q); }
+    x.strokeStyle="rgba(120,115,105,.35)";
+    for(i=0;i<6;i++){ x.beginPath(); x.moveTo(rnd()*256,0); x.bezierCurveTo(rnd()*256,85,rnd()*256,170,rnd()*256,256); x.stroke(); }
+  } else {
+    x.fillStyle="#b08a63"; x.fillRect(0,0,256,256);
+    x.strokeStyle="rgba(70,50,30,.5)"; x.lineWidth=3;
+    for(var d=0;d<=8;d++){ x.beginPath(); x.moveTo(d*32,0); x.lineTo(d*32,256); x.stroke(); }
+  }
+  var t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=4; return t;
+}
+function skyTex(){
+  var c=document.createElement("canvas"); c.width=4; c.height=256; var x=c.getContext("2d");
+  var g=x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0,"#e9dcbd"); g.addColorStop(0.55,"#cfc6b2"); g.addColorStop(1,"#9fb0b8");
+  x.fillStyle=g; x.fillRect(0,0,4,256);
+  return new THREE.CanvasTexture(c);
+}
+function buildUnit(g,L,walk){
+  var CLAY=walk?0xe7dfd0:0xf2efe9;
+  var ch=L.ch, wallH=walk?ch:Math.min(5.2,ch*0.55), t=0.34;
+  function mat(c){return new THREE.MeshStandardMaterial({color:c,roughness:0.92,metalness:0.02})}
+  function box(w,h,d,x,y,z,m){var b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);b.position.set(x,y,z);b.castShadow=true;b.receiveShadow=true;g.add(b);return b}
+  var maxX=L.W, maxZ=L.D;
+  L.rooms.forEach(function(r){ var ze=r.z+r.dp; if(ze>maxZ)maxZ=ze; });
+  /* base slab */
+  box(maxX,0.16,maxZ,maxX/2,-0.2,maxZ/2,mat(0xcdbb9d));
+  /* room floors */
+  L.rooms.forEach(function(r){
+    var f=r.f||OAK, m;
+    if(walk){
+      var tx=makeTex(f==="stone"?"stone":(f==="deck"?"deck":"oak"));
+      tx.repeat.set(Math.max(1,r.w/8),Math.max(1,r.dp/8));
+      m=new THREE.MeshStandardMaterial({map:tx,roughness:0.85,metalness:0.02});
+    } else {
+      var c=f==="stone"?0xcfc9c0:(f==="deck"?0xb08a63:0xd9c3a3);
+      m=mat(c);
+    }
+    var slab=box(r.w,0.24,r.dp,r.x+r.w/2,-0.12,r.z+r.dp/2,m);
+    slab.userData.room={n:r.n,d:r.d};
+    doll.pickList.push(slab);
+  });
+  /* walls with door gaps */
+  L.walls.forEach(function(w){
+    var x1=w[0],z1=w[1],x2=w[2],z2=w[3],gaps=w[4]||[];
+    var horiz=(z1===z2), len=horiz?x2-x1:z2-z1, pos=0;
+    var segs=[]; gaps.slice().sort(function(a,b){return a[0]-b[0]}).forEach(function(gp){ if(gp[0]>pos)segs.push([pos,gp[0]]); pos=gp[1]; });
+    if(pos<len) segs.push([pos,len]);
+    segs.forEach(function(sg){
+      var sl=sg[1]-sg[0]; if(sl<0.05)return;
+      var mid=(sg[0]+sg[1])/2;
+      if(horiz) box(sl,wallH,t, x1+mid, wallH/2, z1, mat(CLAY));
+      else box(t,wallH,sl, x1, wallH/2, z1+mid, mat(CLAY));
+    });
+    if(walk){ /* lintels above door gaps */
+      gaps.forEach(function(gp){
+        var gw=gp[1]-gp[0], mid=(gp[0]+gp[1])/2, lh=ch-7.2; if(lh<=0)return;
+        if(horiz) box(gw,lh,t, x1+mid, 7.2+lh/2, z1, mat(CLAY));
+        else box(t,lh,gw, x1, 7.2+lh/2, z1+mid, mat(CLAY));
+      });
+    }
+    (w[4]||[]).forEach(function(dr){ /* door arc + leaf */
+      if(walk) return;
+      var horiz2=(w[0]===w[2]), x0,y0;
+      if(horiz2){ x0=w[0]+dr[0]; y0=w[1]; } else { x0=w[0]; y0=w[1]+dr[0]; }
+      var arc=new THREE.Path();
+      arc.absarc(x0,y0,2.1,0,Math.PI/2,false);
+      var pts=arc.getPoints(10).map(function(p){ return new THREE.Vector3(p.x,0.15,p.y) });
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xb0a48c})));
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x0,0.15,y0),new THREE.Vector3(x0+2.1,0.15,y0)]),new THREE.LineBasicMaterial({color:0xb0a48c})));
+    });
+  });
+  /* perimeter shell */
+  [[0,0,maxX,0],[maxX,0,maxX,maxZ],[maxX,maxZ,0,maxZ],[0,maxZ,0,0]].forEach(function(w){
+    var x1=w[0],z1=w[1],x2=w[2],z2=w[3],horiz=(z1===z2);
+    if(horiz) box(x2-x1,wallH,t,(x1+x2)/2,wallH/2,z1,mat(CLAY)); else box(t,wallH,z2-z1,x1,wallH/2,(z1+z2)/2,mat(CLAY));
+  });
+  /* furniture */
+  var FH={bed:1.7,sofa:2.6,table:2.4,dining:2.4,counter:3,island:3,vanity:2.8,tub:1.9};
+  (L.furn||[]).forEach(function(f){
+    var b=box(f.w,FH[f.k]||2,f.dp,f.x+f.w/2,(FH[f.k]||2)/2+0.1,f.z+f.dp/2,mat(0xe8e2d6));
+    b.rotation.y=(f.rot?Math.PI/2:0);
+  });
+  /* glass + sky backdrop */
+  var sky=skyTex();
+  (L.glass||[]).forEach(function(gl){
+    var z=gl.side==="n"?0:maxZ, x1=gl.a,x2=gl.b;
+    var gh=walk?ch-0.6:wallH*0.92;
+    var gm=new THREE.MeshStandardMaterial({color:0xcfe2e8,roughness:0.08,metalness:0.1,transparent:true,opacity:walk?0.18:0.42});
+    var p=new THREE.Mesh(new THREE.BoxGeometry(x2-x1,gh,0.06),gm);
+    p.position.set((x1+x2)/2,gh/2+0.3,z+(gl.side==="n"?0.2:-0.2)); g.add(p);
+    if(walk){
+      var bd=new THREE.Mesh(new THREE.PlaneGeometry(240,80),new THREE.MeshBasicMaterial({map:sky,side:THREE.DoubleSide}));
+      bd.position.set((x1+x2)/2,26,z+(gl.side==="n"?-26:26));
+      if(gl.side==="n") bd.rotation.y=0; else bd.rotation.y=Math.PI;
+      g.add(bd);
+    }
+  });
+  if(walk){ /* ceiling */
+    var ce=new THREE.Mesh(new THREE.PlaneGeometry(maxX,maxZ),new THREE.MeshStandardMaterial({color:0xf4efe6,roughness:0.95,side:THREE.DoubleSide}));
+    ce.rotation.x=Math.PI/2; ce.position.set(maxX/2,ch,maxZ/2); g.add(ce);
+  }
+  /* shadow catcher */
+  var plane=new THREE.Mesh(new THREE.PlaneGeometry(500,500),new THREE.ShadowMaterial({opacity:0.4}));
+  plane.rotation.x=-Math.PI/2; plane.position.set(maxX/2,-0.26,maxZ/2); plane.receiveShadow=true; g.add(plane);
+  doll.center={x:maxX/2,z:maxZ/2};
+  doll.R=Math.sqrt(maxX*maxX+maxZ*maxZ)/2+2;
+}
+function setupWalk(L){
+  var maxZ=L.D;
+  L.rooms.forEach(function(r){ var ze=r.z+r.dp; if(ze>maxZ)maxZ=ze; });
+  var pts=[];
+  L.rooms.forEach(function(r){ if(r.w*r.dp>=14) pts.push({x:r.x+r.w/2,z:r.z+r.dp/2}); });
+  L.walls.forEach(function(w){
+    (w[4]||[]).forEach(function(gp){
+      if(w[0]===w[2]) pts.push({x:w[0],z:w[1]+(gp[0]+gp[1])/2});
+      else pts.push({x:w[0]+(gp[0]+gp[1])/2,z:w[1]});
+    });
+  });
+  /* solid wall segments (perimeter + interior minus gaps) */
+  var solids=[[0,0,L.W,0],[L.W,0,L.W,maxZ],[L.W,maxZ,0,maxZ],[0,maxZ,0,0]];
+  L.walls.forEach(function(w){
+    var x1=w[0],z1=w[1],x2=w[2],z2=w[3],horiz=(z1===z2),len=horiz?x2-x1:z2-z1,pos=0;
+    (w[4]||[]).slice().sort(function(a,b){return a[0]-b[0]}).forEach(function(gp){
+      if(gp[0]>pos) solids.push(horiz?[x1+pos,z1,x1+gp[0],z1]:[x1,z1+pos,x1,z1+gp[0]]);
+      pos=gp[1]; });
+    if(pos<len) solids.push(horiz?[x1+pos,z1,x1+len,z1]:[x1,z1+pos,x1,z1+len]);
+  });
+  function cross(a,b,s){
+    var d1x=b.x-a.x,d1z=b.z-a.z,d2x=s[2]-s[0],d2z=s[3]-s[1];
+    var den=d1x*d2z-d1z*d2x; if(Math.abs(den)<1e-9) return false;
+    var t=((s[0]-a.x)*d2z-(s[1]-a.z)*d2x)/den, u=((s[0]-a.x)*d1z-(s[1]-a.z)*d1x)/den;
+    return t>0.001&&t<0.999&&u>0.001&&u<0.999;
+  }
+  var n=pts.length, adj=[]; for(var i=0;i<n;i++) adj[i]=[];
+  for(i=0;i<n;i++) for(var j=i+1;j<n;j++){
+    var blocked=false;
+    for(var k=0;k<solids.length;k++){ if(cross(pts[i],pts[j],solids[k])){blocked=true;break} }
+    if(!blocked){ adj[i].push(j); adj[j].push(i); }
+  }
+  /* start: largest room, facing the farthest waypoint (longest sightline) */
+  var start=0, best=-1, cnt=0;
+  L.rooms.forEach(function(r){ var a=r.w*r.dp; if(a>=14){ if(a>best){best=a;start=cnt} cnt++; } });
+  var far=null, fd=-1;
+  pts.forEach(function(p,i){ if(i===start)return; var d=(p.x-pts[start].x)*(p.x-pts[start].x)+(p.z-pts[start].z)*(p.z-pts[start].z); if(d>fd){fd=d;far=p} });
+  var yaw=far?Math.atan2(-(far.x-pts[start].x),-(far.z-pts[start].z)):0;
+  doll.walk={pts:pts,adj:adj,cur:start,pos:new THREE.Vector3(pts[start].x,0,pts[start].z),yaw:yaw,pitch:-0.04,anim:null};
+  /* hotspot markers */
+  pts.forEach(function(p,i){
+    var ring=new THREE.Mesh(new THREE.RingGeometry(0.8,1.2,28),new THREE.MeshBasicMaterial({color:0xe5cf9a,transparent:true,opacity:0.95,side:THREE.DoubleSide}));
+    ring.rotation.x=-Math.PI/2; ring.position.set(p.x,0.14,p.z); ring.userData.wp=i;
+    var dot=new THREE.Mesh(new THREE.CircleGeometry(0.3,20),new THREE.MeshBasicMaterial({color:0xe5cf9a,transparent:true,opacity:0.95,side:THREE.DoubleSide}));
+    dot.rotation.x=-Math.PI/2; dot.position.set(p.x,0.14,p.z); dot.userData.wp=i;
+    doll.group.add(ring); doll.group.add(dot);
+    doll.hot.push(ring); doll.hot.push(dot);
+  });
+}
+function walkPath(to){
+  var wk=doll.walk; if(!wk) return;
+  var from=wk.cur, n=wk.pts.length;
+  var prev=new Array(n).fill(-1), seen=new Array(n).fill(false), q=[from]; seen[from]=true;
+  while(q.length){
+    var c=q.shift(); if(c===to) break;
+    wk.adj[c].forEach(function(m){ if(!seen[m]){seen[m]=true;prev[m]=c;q.push(m)} });
+  }
+  if(!seen[to]) return;
+  var chain=[to]; while(chain[0]!==from) chain.unshift(prev[chain[0]]);
+  wk.anim={pts:chain.map(function(i){return wk.pts[i]}),seg:0,t:0};
+  wk.cur=to;
+}
+function tapPick(e){
+  if(!doll.cam) return;
+  var cv=document.getElementById("dollCanvas"), r=cv.getBoundingClientRect();
+  var nx=((e.clientX-r.left)/r.width)*2-1, ny=-((e.clientY-r.top)/r.height)*2+1;
+  var rc=new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx,ny),doll.cam);
+  if(doll.mode==="walk"){
+    var hits=rc.intersectObjects(doll.hot.filter(function(h){return h.visible}));
+    if(hits.length) walkPath(hits[0].object.userData.wp);
+    return;
+  }
+  var hits2=rc.intersectObjects(doll.pickList);
+  var tip=document.getElementById("roomTip");
+  if(hits2.length&&hits2[0].object.userData.room){
+    var rm=hits2[0].object.userData.room;
+    tip.textContent=rm.n+(rm.d?" · "+rm.d:"");
+    tip.style.opacity=1;
+    clearTimeout(tip._t); tip._t=setTimeout(function(){tip.style.opacity=0},2200);
+  }
+}
+
+/* ================= MISC ================= */
+document.querySelectorAll(".back").forEach(function(b){
+  b.addEventListener("click",function(){
+    if(b.dataset.go==="tower") go("/tower");
+    else if(S.unit) go("/floor/"+UNITS[S.unit].floor);
+    else go("/tower");
+  });
+});
+route();
+</script>
+</body>
+</html>
