@@ -1,0 +1,21 @@
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#6f97c8}
+#g{position:absolute;inset:0;transform-origin:50% 62%;will-change:transform;background:linear-gradient(180deg,#4284cf 0,#4284cf 50%,#666368 100%)}
+#main{position:absolute;background:url(1-h14land.webp) center/100% 100% no-repeat}
+#sh{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,6,4,.62) 0%,rgba(8,6,4,.38) 26%,rgba(8,6,4,0) 44%,rgba(8,6,4,0) 80%,rgba(8,6,4,.55) 100%),linear-gradient(0deg,rgba(8,6,4,.55) 0,rgba(8,6,4,0) 22%)}
+</style>
+<div id=g><div id=main></div><div id=sh></div></div>
+<script>
+const g=document.getElementById('g'),M=document.getElementById('main');
+function layout(){const H=innerHeight,W=innerWidth,r=1672/941;
+ let w,h,x,y;
+ if(W>=H){w=Math.max(W,H*r);h=w/r;x=(W-w)/2;y=(H-h)*.45}
+ else{w=W;h=W*1672/941;x=0;y=Math.max(0,(H-h)*.5);M.style.backgroundImage='url(2-h14port.webp)'}
+ M.style.left=x+'px';M.style.top=y+'px';M.style.width=w+'px';M.style.height=h+'px'}
+addEventListener('resize',layout);layout();
+let zt=1;function apply(){g.style.transform=`scale(${zt})`}
+window.__TOWER3D={ready:true,play(){},select(f){},
+ reset(){zt=1;g.style.transition='transform .9s cubic-bezier(.3,.1,.2,1)';apply()},
+ zoom(f){zt=1.08;g.style.transition='transform 1.25s cubic-bezier(.3,.1,.2,1)';apply()},
+ bounds(){return [1,2,3,4,5,6,7].map(f=>({f,x:-200,y:-200,w:1,h:1}))}};
+</script>
